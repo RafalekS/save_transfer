@@ -248,7 +248,29 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _load_profiles(self) -> None:
-        self._profiles = load_all_profiles()
+        all_profiles = load_all_profiles()
+
+        # Build set of installed package folder names once (fast — just directory names)
+        from modules.xbox_save import PACKAGES_ROOT
+        installed_pkgs: set[str] = set()
+        if PACKAGES_ROOT.exists():
+            try:
+                installed_pkgs = {p.name.lower() for p in PACKAGES_ROOT.iterdir() if p.is_dir()}
+            except OSError:
+                pass
+
+        # Only show profiles where the Xbox package folder actually exists on this PC
+        self._profiles = []
+        for p in all_profiles:
+            pkg_lower = p.xbox_package.lower()
+            # Match exact folder name OR prefix (profile may store just the prefix)
+            is_installed = (
+                pkg_lower in installed_pkgs
+                or any(name.startswith(pkg_lower) for name in installed_pkgs)
+            )
+            if is_installed:
+                self._profiles.append(p)
+
         self._game_combo.blockSignals(True)
         self._game_combo.clear()
         self._game_combo.addItem("— Select a game —", None)
@@ -354,8 +376,11 @@ class MainWindow(QMainWindow):
             self._refresh_xbox_table()
 
     def _on_browse_steam(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Select Steam Save Folder",
-                                                   str(self._steam_dir or ""))
+        import os
+        default = str(self._steam_dir) if self._steam_dir else str(
+            Path(os.path.expandvars("%USERPROFILE%")) / "AppData" / "LocalLow"
+        )
+        folder = QFileDialog.getExistingDirectory(self, "Select Steam Save Folder", default)
         if folder:
             self._steam_dir = Path(folder)
             self._steam_path_edit.setText(folder)

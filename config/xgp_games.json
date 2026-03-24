@@ -3,6 +3,26 @@
   "_note": "Xbox package name + handler type library. Used to pre-fill the profile wizard.",
   "games": [
     {
+      "name": "9 Kings",
+      "package": "HoodedHorse.9Kings_znaey1dw2bdpr",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Age of Mythology: Retold",
+      "package": "Microsoft.AthensStandardEdition_8wekyb3d8bbwe",
+      "handler": "custom"
+    },
+    {
+      "name": "Alder's Blood",
+      "package": "FatDogGames.AldersBlood_yhw6xj4tp7fdw",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Aliens: Dark Descent",
+      "package": "FocusHomeInteractiveSA.AliensDarkDescent-Windows_4hny5m903y3g0",
+      "handler": "1cnf"
+    },
+    {
       "name": "Arcade Paradise",
       "package": "WiredProductions.ArcadeParadise_hxzk6evwjr6sy",
       "handler": "arcade-paradise"
@@ -14,6 +34,26 @@
       "handler_args": {
         "suffix": ".sav"
       }
+    },
+    {
+      "name": "Balatro",
+      "package": "PlayStack.Balatro_3wcqaesafpzfy",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Ball X Pit",
+      "package": "DevolverDigital.BallxPit_6kzv4j18v0c96",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Brotato",
+      "package": "19886SeavenStudio.Brotato_fahzzgrzfd3xc",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Carrion",
+      "package": "DevolverDigital.CarrionWin10_6kzv4j18v0c96",
+      "handler": "1cnf"
     },
     {
       "name": "Celeste",
@@ -54,9 +94,24 @@
       "handler": "cricket-24"
     },
     {
+      "name": "Dead Static Drive",
+      "package": "TeamFanclub.DeadStaticDrive_n72e9asz2a6mp",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Deep Rock Galactic: Survivor",
+      "package": "GhostShipPublishing.DeepRockGalacticSurvivor_ea2gzvszrg5sg",
+      "handler": "1cnf"
+    },
+    {
       "name": "Doom Eternal",
       "package": "BethesdaSoftworks.DOOMEternal-PC_3275kfvn8vcwc",
       "handler": "1cnf-folder"
+    },
+    {
+      "name": "Drop Duchy",
+      "package": "DotEmu.DropDuchy_map6zyh9ym1xy",
+      "handler": "1cnf"
     },
     {
       "name": "Final Fantasy XV",
@@ -87,6 +142,11 @@
       "handler": "1cnf"
     },
     {
+      "name": "Halls of Torment",
+      "package": "11443ChasingCarrotsGmbHCo.HallsofTorment_xfxtxadz31m7r",
+      "handler": "1cnf"
+    },
+    {
       "name": "Hi-Fi RUSH",
       "package": "BethesdaSoftworks.Hibiki_3275kfvn8vcwc",
       "handler": "1c1f",
@@ -110,6 +170,11 @@
     {
       "name": "Just Cause 4",
       "package": "39C668CD.JustCause4-BaseGame_r7bfsmp40f67j",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Killer Frequency",
+      "package": "Team17DigitalLimited.KillerFrequency_j5x4vj4y67jhc",
       "handler": "1cnf"
     },
     {
@@ -150,6 +215,11 @@
       }
     },
     {
+      "name": "MARVEL Cosmic Invasion",
+      "package": "DotEmu.Poutine_map6zyh9ym1xy",
+      "handler": "1cnf"
+    },
+    {
       "name": "Mechwarrior 5 Clans",
       "package": "PiranhaGamesInc.MechWarrior5Clans_skpx0jhaqqap2",
       "handler": "1c1f",
@@ -161,6 +231,16 @@
       "name": "Monster Train",
       "package": "69C22BB6.MonsterTrain_8ekbzbj4dakee",
       "handler": "1cnf-folder"
+    },
+    {
+      "name": "Monster Train 2",
+      "package": "69C22BB6.Project-TITAN_8ekbzbj4dakee",
+      "handler": "1cnf"
+    },
+    {
+      "name": "Monsters are Coming! Rock & Road",
+      "package": "RawFury.MonstersareComingRockRoad_9s0pnehqffj7t",
+      "handler": "1cnf"
     },
     {
       "name": "Ninja Gaiden Sigma",
@@ -240,6 +320,16 @@
       }
     },
     {
+      "name": "Retro Classics",
+      "package": "Microsoft.Pleasantville_8wekyb3d8bbwe",
+      "handler": "custom"
+    },
+    {
+      "name": "Routine",
+      "package": "RawFury.ROUTINE_9s0pnehqffj7t",
+      "handler": "1cnf"
+    },
+    {
       "name": "Scorn",
       "package": "KeplerInteractive.1439274AB3A46_ymj30pw7xe604",
       "handler": "scorn"
@@ -251,6 +341,11 @@
       "handler_args": {
         "suffix": ".sos"
       }
+    },
+    {
+      "name": "Shadowrun: Hong Kong - Extended Edition",
+      "package": "ParadoxInteractive.619109D7ECF6C_zfnrdv2de78ny",
+      "handler": "1cnf"
     },
     {
       "name": "SnowRunner",
@@ -267,6 +362,11 @@
       "handler_args": {
         "suffix": ".sav"
       }
+    },
+    {
+      "name": "Space Hulk: Tactics",
+      "package": "FocusHomeInteractiveSA.61367EF3CBFBE_4hny5m903y3g0",
+      "handler": "1cnf"
     },
     {
       "name": "SpiderHeck",
@@ -321,6 +421,11 @@
       "handler_args": {
         "suffix": ".sav"
       }
+    },
+    {
+      "name": "Vampire Survivors",
+      "package": "poncle.VampireSurvivors_9pv5cyp4vwdsr",
+      "handler": "1cnf"
     },
     {
       "name": "Wo Long: Fallen Dynasty",

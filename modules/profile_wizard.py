@@ -11,6 +11,7 @@ Page flow:
 import json
 import logging
 import os
+import subprocess
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
@@ -92,11 +93,52 @@ def _load_xgp_games() -> list[dict]:
     return []
 
 
+def _get_manifest_display_names(pkg_folder_names: list[str]) -> dict[str, str]:
+    """
+    Use PowerShell to read AppxManifest.xml DisplayName for a list of
+    package folder names (PackageFamilyName == folder name under Packages\\).
+    Returns {pkg_folder_name_lower: display_name}.
+    """
+    if not pkg_folder_names:
+        return {}
+    filters = " -or ".join(
+        f'$_.PackageFamilyName -eq "{n}"' for n in pkg_folder_names
+    )
+    script = (
+        f'Get-AppxPackage | Where-Object {{ {filters} }} | ForEach-Object {{'
+        '    $m = Join-Path $_.InstallLocation "AppxManifest.xml";'
+        '    if (Test-Path $m) {'
+        '        [xml]$x = Get-Content $m -Raw;'
+        '        $dn = $x.Package.Properties.DisplayName;'
+        '        if ($dn -and -not $dn.StartsWith("ms-resource:")) {'
+        '            Write-Output "$($_.PackageFamilyName)`t$dn"'
+        '        }'
+        '    }'
+        '}'
+    )
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            capture_output=True, text=True, timeout=20,
+        )
+        mapping: dict[str, str] = {}
+        for line in result.stdout.splitlines():
+            if "\t" in line:
+                pfn, name = line.split("\t", 1)
+                mapping[pfn.strip().lower()] = name.strip()
+        return mapping
+    except Exception as e:
+        log.warning("PowerShell manifest lookup failed: %s", e)
+        return {}
+
+
 def _scan_packages_with_saves() -> list[tuple[str, dict | None]]:
     """
     Scan %LOCALAPPDATA%\\Packages\\ for folders that have WGS save data.
+    For packages not in xgp_games.json, queries AppxManifest via PowerShell
+    to get the proper display name.
     Returns list of (pkg_folder_name, xgp_game_dict_or_None), sorted: known games first,
-    then unknown, both alphabetically within each group.
+    then unknown (by resolved display name), both alphabetically.
     """
     xgp_games = _load_xgp_games()
     pkg_lookup = {g["package"].lower(): g for g in xgp_games}
@@ -123,10 +165,39 @@ def _scan_packages_with_saves() -> list[tuple[str, dict | None]]:
         except OSError:
             continue
 
-    # Sort: known games first (by game name), then unknown (by package name)
-    known = sorted([(n, g) for n, g in results if g], key=lambda x: x[1]["name"].lower())
-    unknown = sorted([(n, g) for n, g in results if not g], key=lambda x: x[0].lower())
-    return known + unknown
+    # For unknowns, resolve display names from AppxManifest via PowerShell
+    unknown_pkgs = [n for n, g in results if g is None]
+    manifest_names = _get_manifest_display_names(unknown_pkgs)
+
+    # Attach resolved names to unknown entries as synthetic game_data
+    resolved: list[tuple[str, dict | None]] = []
+    for pkg_name, game_data in results:
+        if game_data is None:
+            display = manifest_names.get(pkg_name.lower())
+            if display:
+                # Create a minimal game_data so it shows with a proper name
+                game_data = {
+                    "name": display,
+                    "package": pkg_name,
+                    "handler": "auto-detect",
+                    "_from_manifest": True,
+                }
+        resolved.append((pkg_name, game_data))
+
+    # Sort: db-known games first, then manifest-resolved, then truly unknown
+    known = sorted(
+        [(n, g) for n, g in resolved if g and not g.get("_from_manifest")],
+        key=lambda x: x[1]["name"].lower(),
+    )
+    manifest_only = sorted(
+        [(n, g) for n, g in resolved if g and g.get("_from_manifest")],
+        key=lambda x: x[1]["name"].lower(),
+    )
+    truly_unknown = sorted(
+        [(n, g) for n, g in resolved if g is None],
+        key=lambda x: x[0].lower(),
+    )
+    return known + manifest_only + truly_unknown
 
 
 class ProfileWizard(QDialog):
@@ -239,22 +310,27 @@ class ProfileWizard(QDialog):
         self._scan_status.setText(f"{len(self._scan_results)} game(s) with saves found.")
 
     def _render_pick_list(self, query: str) -> None:
+        from PyQt6.QtGui import QColor
         self._pick_list.clear()
         q = query.lower()
         for pkg_name, game_data in self._scan_results:
             if game_data:
-                display = f"{game_data['name']}   [{game_data['handler']}]"
+                handler = game_data.get("handler", "auto-detect")
+                from_manifest = game_data.get("_from_manifest", False)
+                display = f"{game_data['name']}   [{handler}]"
                 search_text = game_data["name"].lower()
             else:
                 display = f"Unknown — {pkg_name}"
                 search_text = pkg_name.lower()
-            if q and q not in search_text:
+            if q and q not in search_text and q not in pkg_name.lower():
                 continue
             item = QListWidgetItem(display)
             item.setData(Qt.ItemDataRole.UserRole, {"pkg_name": pkg_name, "game_data": game_data})
             if not game_data:
-                from PyQt6.QtGui import QColor
-                item.setForeground(QColor("#888"))
+                item.setForeground(QColor("#999"))
+            elif game_data.get("_from_manifest"):
+                # Resolved from manifest but not in our DB — show in orange to indicate no profile template
+                item.setForeground(QColor("#996600"))
             self._pick_list.addItem(item)
 
     def _filter_pick_list(self, text: str) -> None:
@@ -470,7 +546,10 @@ class ProfileWizard(QDialog):
         self._steam_resolved_label.setText(str(found))
 
     def _browse_steam(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Select Steam Save Folder")
+        start = str(self._steam_dir) if self._steam_dir else str(
+            Path(os.path.expandvars("%USERPROFILE%")) / "AppData" / "LocalLow"
+        )
+        folder = QFileDialog.getExistingDirectory(self, "Select Steam Save Folder", start)
         if folder:
             self._steam_dir = Path(folder)
             self._steam_resolved_label.setText(folder)
