@@ -1,0 +1,16 @@
+{
+  "name": "Super Fantasy Kingdom",
+  "xbox_package": "HoodedHorse.SuperFantasyKingdom_znaey1dw2bdpr",
+  "handler": "1cnf",
+  "steam_path": "%LOCALAPPDATA_LOW%\\Super Fantasy Games\\Super Fantasy Kingdom",
+  "steam_files": [
+    {"steam_name": "1_human_kingdom.data",  "type": "kingdom_human",  "label": "Human Kingdom"},
+    {"steam_name": "1_undead_kingdom.data", "type": "kingdom_undead", "label": "Undead Kingdom"},
+    {"steam_name": "1_permanent.data",      "type": "permanent",      "label": "Player Profile"}
+  ],
+  "identify_rules": [
+    {"type": "permanent",      "required_keys": ["identifier", "stars", "totalKingdoms"], "hint": ""},
+    {"type": "kingdom_human",  "required_keys": ["hero"], "hint": "human"},
+    {"type": "kingdom_undead", "required_keys": ["hero"], "hint": "undead"}
+  ]
+}

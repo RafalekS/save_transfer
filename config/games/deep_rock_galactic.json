@@ -1,0 +1,10 @@
+{
+  "name": "Deep Rock Galactic",
+  "xbox_package": "CoffeeStainStudios.DeepRockGalactic_496a1srhmar9w",
+  "handler": "1c1f",
+  "steam_path": "%STEAM_SAVES%\\FSD\\Saved\\SaveGames",
+  "steam_files": [
+    {"steam_name": "*_Player.sav", "type": "player_save", "label": "Player Save"}
+  ],
+  "identify_rules": []
+}

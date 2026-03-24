@@ -146,3 +146,12 @@ Each game profile defines:
 - Always back up before overwriting saves
 - Never hardcode user paths; resolve at runtime via `os.path.expandvars()` / `os.path.expanduser()`
 - Xbox WGS folders contain both save data and backup blobs — use file size and recency to prefer the primary copy
+
+
+links
+https://www.youtube.com/watch?v=_16Lh4euRGs
+https://www.pcgamesn.com/xbox-game-pass-pc-steam
+
+https://github.com/Z1ni/XGP-save-extractor
+https://github.com/Fr33dan/GPSaveConverter
+https://github.com/brodrigz/XgpSaveTools

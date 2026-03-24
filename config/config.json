@@ -1,0 +1,10 @@
+{
+  "last_game": "",
+  "backup_dir": "backup",
+  "window_geometry": null,
+  "column_states": {
+    "xbox_table": null,
+    "steam_table": null
+  },
+  "log_level": "INFO"
+}
