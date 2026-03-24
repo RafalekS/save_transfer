@@ -248,10 +248,11 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _load_profiles(self) -> None:
-        all_profiles = load_all_profiles()
-
-        # Build set of installed package folder names once (fast — just directory names)
+        import json as _json
         from modules.xbox_save import PACKAGES_ROOT
+        from modules.game_profile import GameProfile as _GP
+
+        # Scan installed package folder names (fast — just directory names)
         installed_pkgs: set[str] = set()
         if PACKAGES_ROOT.exists():
             try:
@@ -259,17 +260,42 @@ class MainWindow(QMainWindow):
             except OSError:
                 pass
 
-        # Only show profiles where the Xbox package folder actually exists on this PC
-        self._profiles = []
-        for p in all_profiles:
-            pkg_lower = p.xbox_package.lower()
-            # Match exact folder name OR prefix (profile may store just the prefix)
-            is_installed = (
+        def _is_installed(xbox_package: str) -> bool:
+            pkg_lower = xbox_package.lower()
+            return (
                 pkg_lower in installed_pkgs
                 or any(name.startswith(pkg_lower) for name in installed_pkgs)
             )
-            if is_installed:
-                self._profiles.append(p)
+
+        # Start with configured profile files, but only if the game is installed
+        file_profiles = {p.xbox_package.lower(): p for p in load_all_profiles() if _is_installed(p.xbox_package)}
+
+        # Also include any installed game from xgp_games.json that has NO profile file yet
+        xgp_path = Path(__file__).parent.parent / "config" / "xgp_games.json"
+        db_profiles: list[GameProfile] = []
+        if xgp_path.exists():
+            try:
+                xgp_games = _json.loads(xgp_path.read_text(encoding="utf-8")).get("games", [])
+                for g in xgp_games:
+                    pkg = g.get("package", "")
+                    if not pkg or not _is_installed(pkg):
+                        continue
+                    if pkg.lower() in file_profiles:
+                        continue  # already have a configured profile
+                    # Create a minimal profile from the DB entry
+                    db_profiles.append(_GP(
+                        name=g["name"],
+                        xbox_package=pkg,
+                        handler=g.get("handler", "1cnf"),
+                        handler_args=g.get("handler_args", {}),
+                    ))
+            except Exception as e:
+                log.warning("Failed to load xgp_games.json for dropdown: %s", e)
+
+        self._profiles = sorted(
+            list(file_profiles.values()) + db_profiles,
+            key=lambda p: p.name.lower(),
+        )
 
         self._game_combo.blockSignals(True)
         self._game_combo.clear()

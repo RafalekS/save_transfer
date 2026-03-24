@@ -33,11 +33,14 @@ def main() -> None:
     app.setApplicationName("Game Save Transfer")
     app.setOrganizationName("RLS")
 
-    icon_path = Path(__file__).parent / "config" / "assets" / "icon.png"
+    icon_path = Path(__file__).parent / "config" / "assets" / "color.png"
     if icon_path.exists():
-        app.setWindowIcon(QIcon(str(icon_path)))
+        icon = QIcon(str(icon_path))
+        app.setWindowIcon(icon)
 
     window = MainWindow()
+    if icon_path.exists():
+        window.setWindowIcon(icon)
     window.show()
 
     sys.exit(app.exec())
