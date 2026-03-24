@@ -143,6 +143,11 @@ class MainWindow(QMainWindow):
         top.addWidget(self._btn_edit_profile)
         root.addLayout(top)
 
+        # ---- Hint bar ----
+        self._hint_label = QLabel("Select a game from the dropdown to begin.")
+        self._hint_label.setStyleSheet("color: #555; font-style: italic; padding: 2px 0;")
+        root.addWidget(self._hint_label)
+
         # ---- Middle: two panels with direction buttons ----
         mid = QHBoxLayout()
         mid.setSpacing(6)
@@ -305,6 +310,13 @@ class MainWindow(QMainWindow):
         if not self._current_profile:
             return
 
+        # Always clear previous game's data first
+        self._xbox_dir = None
+        self._steam_dir = None
+        self._xbox_path_edit.clear()
+        self._steam_path_edit.clear()
+        self._clear_tables()
+
         self._log("Auto-detecting paths…")
 
         # Xbox
@@ -417,13 +429,22 @@ class MainWindow(QMainWindow):
         table.setSortingEnabled(False)
         table.setRowCount(0)
 
-        # Build a set of types that have a matching Xbox blob
+        # Build a set of blob types available on Xbox side
         blob_types = {b.type for b in self._blobs if b.type}
 
         for row, sf in enumerate(self._steam_files):
             table.insertRow(row)
-            has_xbox_match = sf.type in blob_types
-            status = "Ready" if has_xbox_match else "No Xbox blob"
+
+            if self._direction == DIRECTION_XTO_S:
+                # Showing what will happen when copying Xbox → Steam
+                status = "Will overwrite" if sf.path.exists() else "New file"
+                status_color = QColor("#cc6600") if sf.path.exists() else QColor("#006600")
+            else:
+                # Steam → Xbox: indicate whether a matching Xbox blob exists to overwrite
+                has_xbox_match = sf.type in blob_types
+                status = "Ready" if has_xbox_match else "No Xbox blob — launch game on Xbox first"
+                status_color = QColor("#006600") if has_xbox_match else QColor("#cc0000")
+
             items = [
                 QTableWidgetItem(sf.steam_name),
                 QTableWidgetItem(_fmt_size(sf.size)),
@@ -434,6 +455,7 @@ class MainWindow(QMainWindow):
             items[ST_COL_SIZE].setTextAlignment(
                 Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             )
+            items[ST_COL_STATUS].setForeground(status_color)
             for col, item in enumerate(items):
                 table.setItem(row, col, item)
 
@@ -511,6 +533,7 @@ class MainWindow(QMainWindow):
     def _set_direction(self, direction: str) -> None:
         self._direction = direction
         self._update_direction_buttons()
+        self._refresh_steam_table()
         self._update_transfer_button()
 
     def _update_direction_buttons(self) -> None:
@@ -537,6 +560,7 @@ class MainWindow(QMainWindow):
             else:
                 enabled = bool(self._steam_files)
         self._btn_transfer.setEnabled(enabled)
+        self._update_hint()
 
     # ------------------------------------------------------------------
     # Transfer execution
@@ -595,6 +619,41 @@ class MainWindow(QMainWindow):
             self._log(f"UNEXPECTED ERROR: {e}")
             log.exception("Unexpected transfer error")
             QMessageBox.critical(self, "Transfer Failed", f"Unexpected error:\n{e}")
+
+    # ------------------------------------------------------------------
+    # Hint bar
+    # ------------------------------------------------------------------
+
+    def _update_hint(self) -> None:
+        if not self._current_profile:
+            self._hint_label.setText("Select a game from the dropdown to begin.")
+            return
+        if not self._xbox_dir and not self._steam_dir:
+            self._hint_label.setText(
+                "Paths not found automatically. Use Browse to locate save folders manually."
+            )
+            return
+        if not self._xbox_dir:
+            self._hint_label.setText(
+                "Xbox WGS path not found. Browse to the wgs\\ folder under the game's package."
+            )
+            return
+        if not self._steam_dir:
+            self._hint_label.setText(
+                "Steam save folder not found. Browse to the save directory or check the game profile."
+            )
+            return
+        unknown_blobs = [b for b in self._blobs if b.type is None]
+        if unknown_blobs:
+            self._hint_label.setText(
+                f"{len(unknown_blobs)} Xbox blob(s) not identified. "
+                "Double-click the 'Identified As' cell to label them before transferring."
+            )
+            return
+        direction_label = "Xbox → Steam" if self._direction == DIRECTION_XTO_S else "Steam → Xbox"
+        self._hint_label.setText(
+            f"Ready. Direction: {direction_label}. Click Transfer to proceed."
+        )
 
     # ------------------------------------------------------------------
     # Log

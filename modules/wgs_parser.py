@@ -52,12 +52,13 @@ def _read_utf16_string(data: bytes, offset: int) -> tuple[str, int]:
     return raw.decode("utf-16-le").rstrip("\x00"), offset
 
 
-def parse_containers_index(wgs_path: Path) -> list[ContainerEntry]:
+def parse_containers_index(user_dir: Path) -> list[ContainerEntry]:
     """
-    Parse the containers.index binary file in a WGS user directory.
+    Parse the containers.index binary file in a WGS *UserID* directory
+    (one level below the wgs/ root, e.g. wgs/0009000002414F5B_.../containers.index).
     Returns a list of ContainerEntry with the container name and folder path.
     """
-    index_path = wgs_path / "containers.index"
+    index_path = user_dir / "containers.index"
     if not index_path.exists():
         log.warning("containers.index not found at %s", index_path)
         return []
@@ -100,7 +101,7 @@ def parse_containers_index(wgs_path: Path) -> list[ContainerEntry]:
             # Skip container size (8 bytes)
             offset += 8
 
-            folder_path = wgs_path / folder_name
+            folder_path = user_dir / folder_name
             if folder_path.exists():
                 entries.append(ContainerEntry(name=name, folder=folder_path))
                 log.debug("Container: %s → %s", name, folder_path)
@@ -228,25 +229,48 @@ def _find_file_icase(folder: Path, name: str) -> Path | None:
 def get_blob_map(wgs_path: Path) -> dict[str, Path]:
     """
     Parse the WGS directory and return a dict of {blob_name → file_path}.
-    Uses the most recently modified container folder if multiple exist.
+
+    wgs_path is the wgs/ root (e.g. SystemAppData/wgs/).
+    Under it are one or more <UserID> subfolders, each containing containers.index
+    and <ContainerFolder>/ subdirectories with the actual GUID-named data files.
+
     Falls back to listing all GUID files if container parsing fails.
     """
-    containers = parse_containers_index(wgs_path)
+    # Find UserID subfolders (one level below wgs_path)
+    try:
+        user_dirs = sorted(
+            [p for p in wgs_path.iterdir() if p.is_dir()],
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+    except OSError as e:
+        log.warning("Cannot list wgs directory %s: %s", wgs_path, e)
+        return {}
 
-    if containers:
-        # Use the container folder that was most recently modified
+    # Try to parse containers.index from each UserID folder (newest first)
+    for user_dir in user_dirs:
+        containers = parse_containers_index(user_dir)
+        if not containers:
+            continue
         containers.sort(key=lambda c: c.folder.stat().st_mtime, reverse=True)
         blobs = parse_container_file(containers[0].folder)
         if blobs:
+            log.debug("Parsed %d blobs from %s", len(blobs), user_dir.name)
             return {b.name: b.file_path for b in blobs}
-        log.warning("Container file parsing yielded no blobs; falling back to raw scan")
+        log.warning("Container file parsing yielded no blobs in %s; trying next", user_dir.name)
 
-    # Fallback: return all non-container files in the wgs folder subtree
+    log.warning("Container parsing failed for all UserID dirs; falling back to raw scan")
+
+    # Fallback: collect all non-container files two levels deep (UserID/ContainerFolder/GUID)
     blob_map: dict[str, Path] = {}
-    for folder in wgs_path.iterdir():
-        if not folder.is_dir():
+    for user_dir in user_dirs:
+        try:
+            for container_dir in user_dir.iterdir():
+                if not container_dir.is_dir():
+                    continue
+                for f in container_dir.iterdir():
+                    if f.is_file() and not f.name.lower().startswith("container."):
+                        blob_map[f.name] = f
+        except OSError:
             continue
-        for f in folder.iterdir():
-            if f.is_file() and not f.name.lower().startswith("container."):
-                blob_map[f.name] = f
     return blob_map
