@@ -532,8 +532,6 @@ class MainWindow(QMainWindow):
             return
 
         row = item.row()
-        # Map visual row back to blob index (sort may have reordered)
-        # We stored original row in UserRole of column 0
         orig_row_item = self._xbox_table.item(row, XB_COL_NAME)
         if orig_row_item is None:
             return
@@ -542,17 +540,42 @@ class MainWindow(QMainWindow):
             return
         blob = self._blobs[orig_row]
 
-        combo = QComboBox()
-        for sf in self._current_profile.steam_files:
-            combo.addItem(sf.label, sf.type)
-        if blob.type:
-            idx = next(
-                (i for i in range(combo.count()) if combo.itemData(i) == blob.type), 0
-            )
-            combo.setCurrentIndex(idx)
+        steam_files = self._current_profile.steam_files
 
-        self._xbox_table.setCellWidget(row, XB_COL_TYPE, combo)
-        combo.currentIndexChanged.connect(lambda: self._apply_blob_label(combo, orig_row, row))
+        if steam_files:
+            # Profile has Steam files defined — offer them as choices
+            combo = QComboBox()
+            for sf in steam_files:
+                combo.addItem(sf.label, sf.type)
+            if blob.type:
+                idx = next(
+                    (i for i in range(combo.count()) if combo.itemData(i) == blob.type), 0
+                )
+                combo.setCurrentIndex(idx)
+            self._xbox_table.setCellWidget(row, XB_COL_TYPE, combo)
+            combo.currentIndexChanged.connect(lambda: self._apply_blob_label(combo, orig_row, row))
+        else:
+            # No Steam files configured yet — let user type a label freely
+            from PyQt6.QtWidgets import QInputDialog
+            current = blob.label or blob.type or ""
+            text, ok = QInputDialog.getText(
+                self, "Label blob",
+                f"Enter a label for this save blob:\n{blob.name}",
+                text=current,
+            )
+            if ok and text.strip():
+                blob.type = text.strip().lower().replace(" ", "_")
+                blob.label = text.strip()
+                blob.confidence = "manual"
+                type_item = QTableWidgetItem(blob.label)
+                self._xbox_table.setItem(row, XB_COL_TYPE, type_item)
+                conf_item = QTableWidgetItem("manual")
+                self._xbox_table.setItem(row, XB_COL_CONF, conf_item)
+                for col in range(self._xbox_table.columnCount()):
+                    it = self._xbox_table.item(row, col)
+                    if it:
+                        it.setForeground(QColor())
+                self._update_transfer_button()
 
     def _apply_blob_label(self, combo: QComboBox, orig_row: int, visual_row: int) -> None:
         if orig_row >= len(self._blobs):
